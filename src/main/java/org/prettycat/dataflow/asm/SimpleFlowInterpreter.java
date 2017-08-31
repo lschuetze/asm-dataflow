@@ -7,11 +7,9 @@ import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.Interpreter;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implements Opcodes {
 	
@@ -19,7 +17,7 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
 
     public SimpleFlowInterpreter() {
         super(ASM5);
-        values = new HashMap<AbstractInsnNode, SimpleFlowValue>();
+        values = new HashMap<>();
     }
 
     @Override
@@ -47,9 +45,11 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
     		final AbstractInsnNode origin,
     		SimpleFlowValue... inputs) 
     {
-    	List<SimpleFlowValue> items = Arrays.asList(inputs).stream().filter(
-    			value -> value != null
-    			).collect(Collectors.toList());
+
+    	List<SimpleFlowValue> items = Optional.ofNullable(inputs)
+                .map(Arrays::stream)
+                .orElseGet(Stream::empty)
+                .collect(Collectors.toList());
     	return newValue(type, origin, items);
     }
 
@@ -123,7 +123,7 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
     @Override
     public SimpleFlowValue copyOperation(final AbstractInsnNode insn,
             final SimpleFlowValue value) throws AnalyzerException {
-    	// SimpleFlowValue sv = (SimpleFlowValue)value;
+    	// SimpleFlowValue sv = value;
         // return new SimpleFlowValue(sv.type, insn, Arrays.asList(new SimpleFlowValue[]{sv}), true);
     	return value;
     }
@@ -140,22 +140,22 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
         case I2B:
         case I2C:
         case I2S:
-            return newValue(Type.INT_TYPE, insn, (SimpleFlowValue)value);
+            return newValue(Type.INT_TYPE, insn, value);
         case FNEG:
         case I2F:
         case L2F:
         case D2F:
-            return newValue(Type.FLOAT_TYPE, insn, (SimpleFlowValue)value);
+            return newValue(Type.FLOAT_TYPE, insn, value);
         case LNEG:
         case I2L:
         case F2L:
         case D2L:
-            return newValue(Type.LONG_TYPE, insn, (SimpleFlowValue)value);
+            return newValue(Type.LONG_TYPE, insn, value);
         case DNEG:
         case I2D:
         case L2D:
         case F2D:
-            return newValue(Type.DOUBLE_TYPE, insn, (SimpleFlowValue)value);
+            return newValue(Type.DOUBLE_TYPE, insn, value);
         case IFEQ:
         case IFNE:
         case IFLT:
@@ -170,49 +170,49 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
         case DRETURN:
         case ARETURN:
         case PUTSTATIC:
-        	newValue(null, insn, (SimpleFlowValue)value);
+        	newValue(null, insn, value);
             return null;
         case GETFIELD:
-            return newValue(Type.getType(((FieldInsnNode) insn).desc), insn, (SimpleFlowValue)value);
+            return newValue(Type.getType(((FieldInsnNode) insn).desc), insn, value);
         case NEWARRAY:
             switch (((IntInsnNode) insn).operand) {
             case T_BOOLEAN:
-                return newValue(Type.getType("[Z"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[Z"), insn, value);
             case T_CHAR:
-                return newValue(Type.getType("[C"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[C"), insn, value);
             case T_BYTE:
-                return newValue(Type.getType("[B"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[B"), insn, value);
             case T_SHORT:
-                return newValue(Type.getType("[S"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[S"), insn, value);
             case T_INT:
-                return newValue(Type.getType("[I"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[I"), insn, value);
             case T_FLOAT:
-                return newValue(Type.getType("[F"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[F"), insn, value);
             case T_DOUBLE:
-                return newValue(Type.getType("[D"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[D"), insn, value);
             case T_LONG:
-                return newValue(Type.getType("[J"), insn, (SimpleFlowValue)value);
+                return newValue(Type.getType("[J"), insn, value);
             default:
                 throw new AnalyzerException(insn, "Invalid array type");
             }
         case ANEWARRAY:
             String desc = ((TypeInsnNode) insn).desc;
-            return newValue(Type.getType("[" + Type.getObjectType(desc)), insn, (SimpleFlowValue)value);
+            return newValue(Type.getType("[" + Type.getObjectType(desc)), insn, value);
         case ARRAYLENGTH:
-            return newValue(Type.INT_TYPE, insn, (SimpleFlowValue)value);
+            return newValue(Type.INT_TYPE, insn, value);
         case ATHROW:
-        	newValue(null, insn, (SimpleFlowValue)value);
+        	newValue(null, insn, value);
             return null;
         case CHECKCAST:
             desc = ((TypeInsnNode) insn).desc;
-            return newValue(Type.getObjectType(desc), insn, (SimpleFlowValue)value);
+            return newValue(Type.getObjectType(desc), insn, value);
         case INSTANCEOF:
-            return newValue(Type.INT_TYPE, insn, (SimpleFlowValue)value);
+            return newValue(Type.INT_TYPE, insn, value);
         case MONITORENTER:
         case MONITOREXIT:
         case IFNULL:
         case IFNONNULL:
-        	newValue(null, insn, (SimpleFlowValue)value);
+        	newValue(null, insn, value);
             return null;
         default:
             throw new Error("Internal error.");
@@ -241,14 +241,14 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
         case IAND:
         case IOR:
         case IXOR:
-            return newValue(Type.INT_TYPE, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2);
+            return newValue(Type.INT_TYPE, insn, value1, value2);
         case FALOAD:
         case FADD:
         case FSUB:
         case FMUL:
         case FDIV:
         case FREM:
-            return newValue(Type.FLOAT_TYPE, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2);
+            return newValue(Type.FLOAT_TYPE, insn, value1, value2);
         case LALOAD:
         case LADD:
         case LSUB:
@@ -261,22 +261,22 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
         case LAND:
         case LOR:
         case LXOR:
-            return newValue(Type.LONG_TYPE, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2);
+            return newValue(Type.LONG_TYPE, insn, value1, value2);
         case DALOAD:
         case DADD:
         case DSUB:
         case DMUL:
         case DDIV:
         case DREM:
-            return newValue(Type.DOUBLE_TYPE, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2);
+            return newValue(Type.DOUBLE_TYPE, insn, value1, value2);
         case AALOAD:
-            return newValue(Type.getObjectType("java/lang/Object"), insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2);
+            return newValue(Type.getObjectType("java/lang/Object"), insn, value1, value2);
         case LCMP:
         case FCMPL:
         case FCMPG:
         case DCMPL:
         case DCMPG:
-            return newValue(Type.INT_TYPE, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2);
+            return newValue(Type.INT_TYPE, insn, value1, value2);
         case IF_ICMPEQ:
         case IF_ICMPNE:
         case IF_ICMPLT:
@@ -286,7 +286,7 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
         case IF_ACMPEQ:
         case IF_ACMPNE:
         case PUTFIELD:
-        	newValue(null, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2);
+        	newValue(null, insn, value1, value2);
             return null;
         default:
             throw new Error("Internal error.");
@@ -299,7 +299,7 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
             final SimpleFlowValue value2,
             final SimpleFlowValue value3) throws AnalyzerException
     {
-    	return newValue(null, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2, (SimpleFlowValue)value3);
+    	return newValue(null, insn, value1, value2, value3);
     }
 
     @Override
@@ -311,9 +311,9 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
             return newValue(Type.getType(((MultiANewArrayInsnNode) insn).desc), insn, values);
         } else if (opcode == INVOKEDYNAMIC) {
             return newValue(Type
-                    .getReturnType(((InvokeDynamicInsnNode) insn).desc), insn, (List<SimpleFlowValue>)values);
+                    .getReturnType(((InvokeDynamicInsnNode) insn).desc), insn, values);
         } else {
-            return newValue(Type.getReturnType(((MethodInsnNode) insn).desc), insn, (List<SimpleFlowValue>)values);
+            return newValue(Type.getReturnType(((MethodInsnNode) insn).desc), insn, values);
         }
     }
 
@@ -323,7 +323,7 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
             final SimpleFlowValue value,
             final SimpleFlowValue expected)
             throws AnalyzerException {
-    	newValue(null, insn, (SimpleFlowValue)value);
+    	newValue(null, insn, value);
     }
 
     @Override
