@@ -1,14 +1,12 @@
 package org.prettycat.dataflow.asm;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-
-import javax.print.attribute.standard.MediaSize.Other;
-
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.analysis.Value;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 
 public class SimpleFlowValue implements Value {
 	public final Type type;
@@ -19,7 +17,7 @@ public class SimpleFlowValue implements Value {
 	
 	private static int uniqueId = 0;
 
-    public SimpleFlowValue(final Type type, final AbstractInsnNode origin, Collection<SimpleFlowValue> inputs, boolean isMerge) {
+    public SimpleFlowValue(final Type type, final AbstractInsnNode origin, Collection<? extends SimpleFlowValue> inputs, boolean isMerge) {
     	this.id = uniqueId++;
         this.type = type;
         this.origin = origin;

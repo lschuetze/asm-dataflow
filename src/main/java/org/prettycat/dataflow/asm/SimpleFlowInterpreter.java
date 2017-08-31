@@ -1,28 +1,19 @@
 package org.prettycat.dataflow.asm;
 
-import java.util.ArrayList;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.tree.analysis.Interpreter;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.objectweb.asm.Handle;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.IntInsnNode;
-import org.objectweb.asm.tree.InvokeDynamicInsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MultiANewArrayInsnNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.analysis.AnalyzerException;
-import org.objectweb.asm.tree.analysis.Interpreter;
-import org.objectweb.asm.tree.analysis.Value;
-
-public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
+public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implements Opcodes {
 	
 	private HashMap<AbstractInsnNode, SimpleFlowValue> values;
 
@@ -32,15 +23,15 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     }
 
     @Override
-    public Value newValue(final Type type) {
+    public SimpleFlowValue newValue(final Type type) {
     	return newValue(type, null);
     }
     
-    public Value newValue(final Type type, final AbstractInsnNode origin) {
+    public SimpleFlowValue newValue(final Type type, final AbstractInsnNode origin) {
     	return newValue(type, origin, (Collection<SimpleFlowValue>)null);
     }
 
-    public Value newValue(final Type type, final AbstractInsnNode origin, final Collection<SimpleFlowValue> inputs) {
+    public SimpleFlowValue newValue(final Type type, final AbstractInsnNode origin, final Collection<? extends SimpleFlowValue> inputs) {
     	if (type != null && type.equals(Type.VOID_TYPE) && origin == null && (inputs == null || inputs.isEmpty())) {
     		return null;
     	}
@@ -51,7 +42,7 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     	return result;
     }
 
-    public Value newValue(
+    public SimpleFlowValue newValue(
     		final Type type, 
     		final AbstractInsnNode origin,
     		SimpleFlowValue... inputs) 
@@ -63,7 +54,7 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     }
 
     @Override
-    public Value newOperation(final AbstractInsnNode insn) throws AnalyzerException {
+    public SimpleFlowValue newOperation(final AbstractInsnNode insn) throws AnalyzerException {
         switch (insn.getOpcode()) {
         case ACONST_NULL:
             return newValue(Type.getObjectType("null"), insn);
@@ -130,16 +121,16 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     }
 
     @Override
-    public Value copyOperation(final AbstractInsnNode insn,
-            final Value value) throws AnalyzerException {
+    public SimpleFlowValue copyOperation(final AbstractInsnNode insn,
+            final SimpleFlowValue value) throws AnalyzerException {
     	// SimpleFlowValue sv = (SimpleFlowValue)value;
         // return new SimpleFlowValue(sv.type, insn, Arrays.asList(new SimpleFlowValue[]{sv}), true);
     	return value;
     }
 
     @Override
-    public Value unaryOperation(final AbstractInsnNode insn,
-            final Value value) throws AnalyzerException {
+    public SimpleFlowValue unaryOperation(final AbstractInsnNode insn,
+            final SimpleFlowValue value) throws AnalyzerException {
         switch (insn.getOpcode()) {
         case INEG:
         case IINC:
@@ -229,10 +220,10 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     }
 
     @Override
-    public Value binaryOperation(
+    public SimpleFlowValue binaryOperation(
     		final AbstractInsnNode insn,
-            final Value value1, 
-            final Value value2)
+            final SimpleFlowValue value1,
+            final SimpleFlowValue value2)
             throws AnalyzerException {
         switch (insn.getOpcode()) {
         case IALOAD:
@@ -303,21 +294,21 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     }
 
     @Override
-    public Value ternaryOperation(final AbstractInsnNode insn,
-            final Value value1, 
-            final Value value2,
-            final Value value3) throws AnalyzerException 
+    public SimpleFlowValue ternaryOperation(final AbstractInsnNode insn,
+            final SimpleFlowValue value1,
+            final SimpleFlowValue value2,
+            final SimpleFlowValue value3) throws AnalyzerException
     {
     	return newValue(null, insn, (SimpleFlowValue)value1, (SimpleFlowValue)value2, (SimpleFlowValue)value3);
     }
 
     @Override
-    public Value naryOperation(
+    public SimpleFlowValue naryOperation(
     		final AbstractInsnNode insn,
-			final List values) throws AnalyzerException {
+			final List<? extends SimpleFlowValue> values) throws AnalyzerException {
         int opcode = insn.getOpcode();
         if (opcode == MULTIANEWARRAY) {
-            return newValue(Type.getType(((MultiANewArrayInsnNode) insn).desc), insn, (List<SimpleFlowValue>)values);
+            return newValue(Type.getType(((MultiANewArrayInsnNode) insn).desc), insn, values);
         } else if (opcode == INVOKEDYNAMIC) {
             return newValue(Type
                     .getReturnType(((InvokeDynamicInsnNode) insn).desc), insn, (List<SimpleFlowValue>)values);
@@ -329,18 +320,16 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     @Override
     public void returnOperation(
     		final AbstractInsnNode insn,
-            final Value value, 
-            final Value expected)
+            final SimpleFlowValue value,
+            final SimpleFlowValue expected)
             throws AnalyzerException {
     	newValue(null, insn, (SimpleFlowValue)value);
     }
 
     @Override
-    public Value merge(final Value v, final Value w) {
+    public SimpleFlowValue merge(final SimpleFlowValue v, final SimpleFlowValue w) {
     	// we need a more complex merge implementation, especially for parameters.
-		final SimpleFlowValue sv = (SimpleFlowValue)v;
-    	final SimpleFlowValue sw = (SimpleFlowValue)w;
-    	
+
     	// System.out.println("merge(" + sv + ", " + sw + ")");
     	
     	/*if (sw.origin == sv.origin && sw.type == sv.type) {
@@ -394,7 +383,7 @@ public class SimpleFlowInterpreter extends Interpreter implements Opcodes {
     	
         // return new SimpleFlowValue(type, null, Arrays.asList(new SimpleFlowValue[]{sv, sw}), true);
     	
-    	return sv.mergeWith(sw);
+    	return v.mergeWith(w);
     }
     
     public SimpleFlowValue getValue(AbstractInsnNode node) {
