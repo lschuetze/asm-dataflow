@@ -25,11 +25,11 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
     	return newValue(type, null);
     }
     
-    public SimpleFlowValue newValue(final Type type, final AbstractInsnNode origin) {
+    private SimpleFlowValue newValue(final Type type, final AbstractInsnNode origin) {
     	return newValue(type, origin, (Collection<SimpleFlowValue>)null);
     }
 
-    public SimpleFlowValue newValue(final Type type, final AbstractInsnNode origin, final Collection<? extends SimpleFlowValue> inputs) {
+    private SimpleFlowValue newValue(final Type type, final AbstractInsnNode origin, final Collection<? extends SimpleFlowValue> inputs) {
     	if (type != null && type.equals(Type.VOID_TYPE) && origin == null && (inputs == null || inputs.isEmpty())) {
     		return null;
     	}
@@ -40,7 +40,7 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
     	return result;
     }
 
-    public SimpleFlowValue newValue(
+    private SimpleFlowValue newValue(
     		final Type type, 
     		final AbstractInsnNode origin,
     		SimpleFlowValue... inputs) 
@@ -386,7 +386,7 @@ public class SimpleFlowInterpreter extends Interpreter<SimpleFlowValue> implemen
     	return v.mergeWith(w);
     }
     
-    public SimpleFlowValue getValue(AbstractInsnNode node) {
+    protected SimpleFlowValue getValue(AbstractInsnNode node) {
     	if (values.containsKey(node)) {
     		return values.get(node);
     	}

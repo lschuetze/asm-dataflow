@@ -1,26 +1,22 @@
 package org.prettycat.dataflow.asm;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.LineNumberNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+
 public class MethodAnalysis {
 	private final String owner;
 	private final MethodNode method;
-	private final Analyzer analyzer;
+	private final Analyzer<SimpleFlowValue> analyzer;
 	private final SimpleFlowInterpreter interpreter;
 	
 	private final HashMap<Integer, ArrayList<Edge> > edges;
@@ -55,18 +51,18 @@ public class MethodAnalysis {
 		this.owner = owner;
 		this.method = method;
 		this.interpreter = new SimpleFlowInterpreter();
-		this.edges = new HashMap<Integer, ArrayList<Edge> >();
-		this.exceptionTargets = new HashSet<Integer>();
-		this.referencedMethods = new HashSet<String>();
-		this.analyzer = new Analyzer(interpreter) {
+		this.edges = new HashMap<>();
+		this.exceptionTargets = new HashSet<>();
+		this.referencedMethods = new HashSet<>();
+		this.analyzer = new Analyzer<SimpleFlowValue>(interpreter) {
 			@Override
 			protected boolean newControlFlowExceptionEdge(int insn, int successor) {
 				if (!edges.containsKey(insn)) {
 					ArrayList<Edge> exits = new ArrayList<>();
 					edges.put(insn, exits);
-				}  
+				}
 				edges.get(insn).add(new Edge(successor, true));
-				
+
 				if (exceptionTargets.contains(successor)) {
 					return false;
 				} else {
@@ -78,7 +74,7 @@ public class MethodAnalysis {
 			@Override
 			protected void newControlFlowEdge(int insn, int successor) {
 				// System.out.println(insn + " -> " + successor);
-				
+
 				if (!edges.containsKey(insn)) {
 					ArrayList<Edge> exits = new ArrayList<>();
 					edges.put(insn, exits);
@@ -117,7 +113,7 @@ public class MethodAnalysis {
 			}
 		}
 		
-		lineNumbers = new ArrayList<Integer>();
+		lineNumbers = new ArrayList<>();
 		int currentLineno = -1;
 		for (int i = 0; i < method.instructions.size(); i += 1) {
 			AbstractInsnNode insn = method.instructions.get(i);
